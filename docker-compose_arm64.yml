@@ -1,0 +1,23 @@
+services:
+  api-benchmark:
+    build: .
+    image: eclipseaerios/benchmarking-tool:1.0.0-arm64
+    network_mode: "host"
+    volumes:
+      - geekbench-volume:/opt/aerios/geekbench 
+      - iperf3-volume:/usr/bin
+    privileged: true
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-8010}
+      - PORT_IPERF=${PORT_IPERF:-5201}
+      - ORION_URL=${ORION_URL:-http://localhost:31026}
+      - LOGGER_LEVEL=${LOGGER_LEVEL:-info}
+      - ENTRYPOINT_HOST_IP=${ENTRYPOINT_HOST_IP:-localhost}
+      - HLO_COMPONENTS_SHIM_URL=${HLO_COMPONENTS_SHIM_URL:-http://localhost:31167}
+
+volumes:
+  geekbench-volume:
+    driver: local
+  iperf3-volume:
+    driver: local

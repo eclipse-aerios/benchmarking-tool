@@ -1,0 +1,9 @@
+node_modules/
+.vscode/
+dist/
+build/
+temp/
+helm-chart-artifact/
+logs/
+*.zip
+*.log

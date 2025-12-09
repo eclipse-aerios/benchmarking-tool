@@ -1,0 +1,79 @@
+{{- if .Values.apiamd64.enabled }}
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "apiamd64.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "apiamd64.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "apiamd64.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "apiamd64.labels" . | nindent 8 }}
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      {{- with .Values.apiamd64.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.chartNodeSelector }}
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.chartNodeSelector }}
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        {{- with .Values.apiamd64.nodeSelector }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.apiamd64.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiamd64.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.apiamd64.podSecurityContext | nindent 8 }}
+      containers:
+        - name: api
+          securityContext:
+            {{- toYaml .Values.apiamd64.securityContext | nindent 12 }}
+          image: "{{ .Values.apiamd64.image.repository }}:{{ .Values.apiamd64.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.apiamd64.image.pullPolicy }}
+          ports:
+            - name: server
+              containerPort: {{ .Values.apiamd64.service.ports.server.containerPort }}
+              protocol: {{ .Values.apiamd64.service.ports.server.protocol }}
+          resources:
+            {{- toYaml .Values.apiamd64.resources | nindent 12 }}
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.apiamd64.envVars.NODE_ENV | quote }}
+            - name: PORT
+              value: {{ .Values.apiamd64.envVars.PORT | quote }}
+            - name: ORION_URL
+              value: {{ .Values.apiamd64.envVars.ORION_URL | quote }}
+            - name: LOGGER_LEVEL
+              value: {{ .Values.apiamd64.envVars.LOGGER_LEVEL | quote }}
+            - name: ENTRYPOINT_HOST_IP
+              value: {{ .Values.apiamd64.envVars.ENTRYPOINT_HOST_IP | quote }}
+            - name: HLO_COMPONENTS_SHIM_URL
+              value: {{ .Values.apiamd64.envVars.HLO_COMPONENTS_SHIM_URL | quote }}
+          volumeMounts:
+            - name: geekbench-volume
+              mountPath: /opt/geekbench
+      volumes:
+        - name: geekbench-volume
+          hostPath:
+            path: /opt/geekbench
+            type: DirectoryOrCreate
+{{- end }}
