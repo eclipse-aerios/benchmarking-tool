@@ -88,3 +88,26 @@ jobs:
             --tag "$image:${{ steps.get_version.outputs.VERSION }}-arm64" \
             "$dir"
         done < dockerfiles.txt
+
+    - name: Create and push multi-arch manifests (latest, sha, version)
+      if: ${{ github.event_name != 'pull_request' }}
+      run: |
+        image="${{ env.IMAGE_PREFIX }}/${{ env.IMAGE_NAME }}"
+
+        # latest
+        docker manifest create "$image:latest" \
+          --amend "$image:latest-amd64" \
+          --amend "$image:latest-arm64"
+        docker manifest push "$image:latest"
+
+        # short SHA
+        docker manifest create "$image:${{ steps.shortsha.outputs.SHORT_SHA }}" \
+          --amend "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-amd64" \
+          --amend "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-arm64"
+        docker manifest push "$image:${{ steps.shortsha.outputs.SHORT_SHA }}"
+
+        # version
+        docker manifest create "$image:${{ steps.get_version.outputs.VERSION }}" \
+          --amend "$image:${{ steps.get_version.outputs.VERSION }}-amd64" \
+          --amend "$image:${{ steps.get_version.outputs.VERSION }}-arm64"
+        docker manifest push "$image:${{ steps.get_version.outputs.VERSION }}"
