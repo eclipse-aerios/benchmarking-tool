@@ -16,8 +16,7 @@ on:
 env:
   DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
   DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
-  IMAGE_PREFIX: eclipseaerios
-  IMAGE_NAME: benchmarking-tool
+  IMAGE_NAME: eclipseaerios/benchmarking-tool
 
 jobs:
   build-and-push-all:
@@ -41,73 +40,63 @@ jobs:
         username: ${{ env.DOCKER_HUB_USER }}
         password: ${{ env.DOCKER_HUB_TOKEN }}
 
-    - name: Set short SHA
-      id: shortsha
-      run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
-    - name: Find all Dockerfiles
-      id: find_dockerfiles
-      run: |
-        find . -name 'Dockerfile' > dockerfiles.txt
-        cat dockerfiles.txt
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
 
     - name: Get version from package.json
       id: get_version
       run: echo "VERSION=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
 
-    - name: Build and push images for all Dockerfiles (amd64)
-      if: ${{ github.event_name != 'pull_request' }}
-      run: |
-        while read dockerfile; do
-          dir=$(dirname "$dockerfile")
-          image="${{ env.IMAGE_PREFIX }}/${{env.IMAGE_NAME}}"
-          echo "Building $image for amd64 from $dockerfile"
-          docker buildx build \
-            --platform linux/amd64 \
-            --file "$dockerfile" \
-            --push \
-            --tag "$image:latest-amd64" \
-            --tag "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-amd64" \
-            --tag "$image:${{ steps.get_version.outputs.VERSION }}-amd64" \
-            "$dir"
-        done < dockerfiles.txt
+    - name: Set short SHA
+      id: shortsha
+      run: echo "SHORT_SHA=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
-    - name: Build and push images for all Dockerfiles (arm64)
-      if: ${{ github.event_name != 'pull_request' }}
-      run: |
-        while read dockerfile; do
-          dir=$(dirname "$dockerfile")
-          image="${{ env.IMAGE_PREFIX }}/${{env.IMAGE_NAME}}"
-          echo "Building $image for arm64 from $dockerfile"
-          docker buildx build \
-            --platform linux/arm64 \
-            --file "$dockerfile" \
-            --push \
-            --tag "$image:latest-arm64" \
-            --tag "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-arm64" \
-            --tag "$image:${{ steps.get_version.outputs.VERSION }}-arm64" \
-            "$dir"
-        done < dockerfiles.txt
+    - name: Build and push the container image for AMD64
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        platforms: linux/amd64
+        tags: |
+          ${{ env.IMAGE_NAME }}:latest-amd64
+          ${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}-amd64
+          ${{ env.IMAGE_NAME }}:${{ steps.shortsha.outputs.SHORT_SHA }}-amd64
+    
+    - name: Build and push the container image for ARM64
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile-arm64
+        push: ${{ github.event_name != 'pull_request' }}
+        platforms: linux/arm64
+        tags: |
+          ${{ env.IMAGE_NAME }}:latest-arm64
+          ${{ env.IMAGE_NAME }}:${{ steps.get_version.outputs.VERSION }}-arm64
+          ${{ env.IMAGE_NAME }}:${{ steps.shortsha.outputs.SHORT_SHA }}-arm64
 
     - name: Create and push multi-arch manifests (latest, sha, version)
       if: ${{ github.event_name != 'pull_request' }}
       run: |
-        image="${{ env.IMAGE_PREFIX }}/${{ env.IMAGE_NAME }}"
+        image="${{ env.IMAGE_NAME }}"
 
         # latest
-        docker manifest create "$image:latest" \
-          --amend "$image:latest-amd64" \
-          --amend "$image:latest-arm64"
-        docker manifest push "$image:latest"
+        docker buildx imagetools create \
+          -t "$image:latest" \
+          "$image:latest-amd64" \
+          "$image:latest-arm64"
 
         # short SHA
-        docker manifest create "$image:${{ steps.shortsha.outputs.SHORT_SHA }}" \
-          --amend "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-amd64" \
-          --amend "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-arm64"
-        docker manifest push "$image:${{ steps.shortsha.outputs.SHORT_SHA }}"
+        docker buildx imagetools create \
+          -t "$image:${{ steps.shortsha.outputs.SHORT_SHA }}" \
+          "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-amd64" \
+          "$image:${{ steps.shortsha.outputs.SHORT_SHA }}-arm64"
 
         # version
-        docker manifest create "$image:${{ steps.get_version.outputs.VERSION }}" \
-          --amend "$image:${{ steps.get_version.outputs.VERSION }}-amd64" \
-          --amend "$image:${{ steps.get_version.outputs.VERSION }}-arm64"
-        docker manifest push "$image:${{ steps.get_version.outputs.VERSION }}"
+        docker buildx imagetools create \
+          -t "$image:${{ steps.get_version.outputs.VERSION }}" \
+          "$image:${{ steps.get_version.outputs.VERSION }}-amd64" \
+          "$image:${{ steps.get_version.outputs.VERSION }}-arm64"
+
+        # verify
+        docker buildx imagetools inspect "$image:${{ steps.get_version.outputs.VERSION }}"
