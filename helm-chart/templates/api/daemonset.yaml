@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "api.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "api.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "api.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "api.labels" . | nindent 8 }}
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      {{- with .Values.api.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.chartNodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if not .Values.chartNodeSelector }}
+      nodeSelector:
+        {{- with .Values.api.nodeSelector }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.api.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.api.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.api.podSecurityContext | nindent 8 }}
+      containers:
+        - name: api
+          securityContext:
+            {{- toYaml .Values.api.securityContext | nindent 12 }}
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.api.image.pullPolicy }}
+          ports:
+            - name: server
+              containerPort: {{ .Values.api.service.ports.server.containerPort }}
+              protocol: {{ .Values.api.service.ports.server.protocol }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          env:
+            - name: NODE_ENV
+              value: {{ .Values.api.envVars.NODE_ENV | quote }}
+            - name: PORT
+              value: {{ .Values.api.envVars.PORT | quote }}
+            - name: ORION_URL
+              value: {{ .Values.api.envVars.ORION_URL | quote }}
+            - name: LOGGER_LEVEL
+              value: {{ .Values.api.envVars.LOGGER_LEVEL | quote }}
+            - name: ENTRYPOINT_HOST_IP
+              value: {{ .Values.api.envVars.ENTRYPOINT_HOST_IP | quote }}
+            - name: HLO_COMPONENTS_SHIM_URL
+              value: {{ .Values.api.envVars.HLO_COMPONENTS_SHIM_URL | quote }}
+          volumeMounts:
+            - name: geekbench-volume
+              mountPath: /opt/geekbench
+      volumes:
+        - name: geekbench-volume
+          hostPath:
+            path: /opt/geekbench
+            type: DirectoryOrCreate

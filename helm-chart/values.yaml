@@ -8,12 +8,9 @@ nameOverride: ""
 fullnameOverride: ""
 # Deploy all the components in specific K8s node(s).
 chartNodeSelector: {}
-enablerNodeSelector: {}
-# Cilium Multi-cluster global service.
-globalService: false
 
-# Component apiamd64 values.
-apiamd64:
+# Component api values.
+api:
   tier: external
   replicaCount: 1
 
@@ -22,82 +19,8 @@ apiamd64:
   image:
     repository: eclipseaerios/benchmarking-tool
     # Overrides the image tag whose default is the chart appVersion.
-    tag: "1.0.0-amd64"
-    pullPolicy: Always
-  # Configuration of the service: type and ports.
-  service:
-    type: ClusterIP
-    ports:
-      server:
-        port: 8010
-        targetPort: 8010
-        containerPort: 8010
-        protocol: TCP
-      iperf3-server:
-        port: 5201
-        targetPort: 5201
-        containerPort: 5201
-        protocol: TCP
-
-  # The specification of the resources is needed for the proper functioning
-  # of the Smart Orchestrator enabler (requests)
-  # and of the Resource provisioning enabler (limits).
-  resources: {}
-    # limits:
-    #   cpu: 100m
-    #   memory: 128Mi
-    # requests:
-    #   cpu: 100m
-    #   memory: 128Mi
-
-  autoscaling:
-    enabled: false
-    # minReplicas: 1
-    # maxReplicas: 3
-    # targetCPUUtilizationPercentage: 80
-    # targetMemoryUtilizationPercentage: 80
-
-  podSecurityContext: {}
-    # fsGroup: 2000
-
-  securityContext:
-    privileged: true
-    runAsUser: 1000
-    # capabilities:
-    #   drop:
-    #   - ALL
-    # readOnlyRootFilesystem: true
-    # runAsNonRoot: true
-    # runAsUser: 1000
-
-  enabled: true
-
-  envVars:
-    NODE_ENV: production
-    PORT: 8010
-    PORT_IPERF: 5201
-    ORION_URL: http://orion-ld-broker.default.svc.cluster.local:1026
-    LOGGER_LEVEL: info
-    ENTRYPOINT_HOST_IP: ""
-    HLO_COMPONENTS_SHIM_URL: http://aerios-k8s-shim-service.default.svc.cluster.local:8085
-
-  # Configure this parameters to deploy the component in specific K8s node(s).
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
-
-# Component apiarm64 values.
-apiarm64:
-  tier: external
-  replicaCount: 1
-
-  # Configuration of the container image.
-  imagePullSecrets: []
-  image:
-    repository: eclipseaerios/benchmarking-tool
-    # Overrides the image tag whose default is the chart appVersion.
-    tag: "1.0.0-arm64"
-    pullPolicy: Always
+    tag: ""
+    pullPolicy: IfNotPresent
   # Configuration of the service: type and ports.
   service:
     type: ClusterIP

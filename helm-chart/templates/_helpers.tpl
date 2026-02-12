@@ -31,10 +31,10 @@ Create chart name and version as used by the chart label.
 {{- end }}
 
 {{/*
-Name of the component apiamd64.
+Name of the component api.
 */}}
-{{- define "apiamd64.name" -}}
-{{- printf "%s-api-amd64" (include "enabler.name" .) | trunc 63 | trimSuffix "-" }}
+{{- define "api.name" -}}
+{{- printf "%s-api" (include "enabler.name" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{/*
 Name of the component apiarm64.
@@ -44,12 +44,12 @@ Name of the component apiarm64.
 {{- end }}
 
 {{/*
-Create a default fully qualified component apiamd64 name.
+Create a default fully qualified component api name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "apiamd64.fullname" -}}
-{{- printf "%s-api-amd64" (include "enabler.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- define "api.fullname" -}}
+{{- printf "%s-api" (include "enabler.fullname" .) | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{/*
 Create a default fully qualified component apiarm64 name.
@@ -62,11 +62,11 @@ If release name contains chart name it will be used as a full name.
 
 
 {{/*
-Component apiamd64 labels.
+Component api labels.
 */}}
-{{- define "apiamd64.labels" -}}
+{{- define "api.labels" -}}
 helm.sh/chart: {{ include "enabler.chart" . }}
-{{ include "apiamd64.selectorLabels" . }}
+{{ include "api.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -85,15 +85,15 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end }}
 
 {{/*
-Component apiamd64 selector labels.
+Component api selector labels.
 */}}
-{{- define "apiamd64.selectorLabels" -}}
+{{- define "api.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "enabler.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 enabler: {{ .Chart.Name }}
-app.kubernetes.io/component: api-amd64
+app.kubernetes.io/component: api
 isMainInterface: "yes"
-tier: {{ .Values.apiamd64.tier }}
+tier: {{ .Values.api.tier }}
 {{- end }}
 {{/*
 Component apiarm64 selector labels.
